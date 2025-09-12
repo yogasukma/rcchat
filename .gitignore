@@ -18,6 +18,7 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/app/chat_session.json
 /vendor
 Homestead.json
 Homestead.yaml
