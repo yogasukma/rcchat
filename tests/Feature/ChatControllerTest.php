@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ChatSession;
+use Illuminate\Support\Facades\Http;
 
 test('init creates session with app_key and returns userToken', function () {
     $response = $this->postJson('/init', ['app_key' => 'test-key-123']);
@@ -318,4 +319,47 @@ test('authentication works with X-User-Token header', function () {
 
     $response->assertStatus(200)
         ->assertJsonStructure(['a', 'actions']);
+});
+
+it('sends message to AI service and returns AI response', function () {
+    // Mock Gemini API response
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response([
+            'candidates' => [
+                [
+                    'content' => [
+                        'parts' => [
+                            [
+                                'text' => 'Hello! I am an AI assistant. How can I help you today?',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ], 200),
+    ]);
+
+    // Initialize session
+    $initResponse = $this->postJson('/init', ['app_key' => 'gemini-test']);
+    $initData = $initResponse->json();
+
+    // Send message
+    $response = $this->postJson('/chats', [
+        'q' => 'Hello, what are you?',
+    ], [
+        'Authorization' => 'Bearer '.$initData['userToken'],
+        'X-Room-Id' => $initData['roomId'],
+    ]);
+
+    $response->assertStatus(200)
+        ->assertJson([
+            'a' => 'Hello! I am an AI assistant. How can I help you today?',
+            'actions' => [],
+        ]);
+
+    // Verify HTTP call was made to Gemini
+    Http::assertSent(function ($request) {
+        return str_contains($request->url(), 'gemini-1.5-flash:generateContent') &&
+               $request->data()['contents'][0]['parts'][0]['text'] === 'Hello, what are you?';
+    });
 });
