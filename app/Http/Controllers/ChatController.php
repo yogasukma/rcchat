@@ -2,13 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class ChatController extends Controller
 {
+    protected TokenService $tokenService;
+
+    public function __construct(TokenService $tokenService)
+    {
+        $this->tokenService = $tokenService;
+    }
+
     /**
      * Initialize chat session with app_key
      */
@@ -19,17 +26,16 @@ class ChatController extends Controller
         ]);
 
         $roomId = Str::random(10);
-        
-        session([
-            'roomId' => $roomId,
-            'msgs' => [],
-            'app_key' => $request->input('app_key'),
-        ]);
+        $appKey = $request->input('app_key');
+
+        // Create new chat session with token
+        $session = $this->tokenService->createSession($roomId, $appKey);
 
         return response()->json([
             'status' => 'initialized',
-            'roomId' => $roomId,
-        ]);
+            'roomId' => $session->room_id,
+            'userToken' => $session->user_token,
+        ], 201);
     }
 
     /**
@@ -41,31 +47,30 @@ class ChatController extends Controller
             'q' => 'required|string',
         ]);
 
-        // Check if session is initialized
-        if (!session('roomId')) {
-            return response()->json([
-                'error' => 'Session not initialized. Please call /init first.',
-            ], 400);
-        }
+        // Get the chat session from middleware
+        $session = $request->attributes->get('chat_session');
 
         $question = $request->input('q');
-        
+
         // Generate fake response using Faker
         $answer = fake()->sentence(rand(5, 15));
         $actions = [
-            fake()->word() . '_' . fake()->word() => fake()->sentence(3),
-            fake()->word() . '_' . fake()->word() => fake()->sentence(3),
+            fake()->word().'_'.fake()->word() => fake()->sentence(3),
+            fake()->word().'_'.fake()->word() => fake()->sentence(3),
         ];
 
-        // Get current messages from session
-        $msgs = session('msgs', []);
-        
-        // Add question and answer to messages
-        $msgs[] = ['q' => $question];
-        $msgs[] = ['a' => $answer, 'actions' => $actions];
-        
-        // Update session
-        session(['msgs' => $msgs]);
+        // Create question message
+        $session->messages()->create([
+            'type' => 'question',
+            'content' => $question,
+        ]);
+
+        // Create answer message
+        $session->messages()->create([
+            'type' => 'answer',
+            'content' => $answer,
+            'actions' => $actions,
+        ]);
 
         return response()->json([
             'a' => $answer,
@@ -74,39 +79,43 @@ class ChatController extends Controller
     }
 
     /**
-     * Get all chat messages from session
+     * Get all chat messages from database
      */
-    public function getChats(): JsonResponse
+    public function getChats(Request $request): JsonResponse
     {
-        // Check if session is initialized
-        if (!session('roomId')) {
-            return response()->json([
-                'error' => 'Session not initialized. Please call /init first.',
-            ], 400);
-        }
+        // Get the chat session from middleware
+        $session = $request->attributes->get('chat_session');
+
+        // Transform messages to match original format
+        $msgs = $session->messages->map(function ($message) {
+            if ($message->type === 'question') {
+                return ['q' => $message->content];
+            } else {
+                return [
+                    'a' => $message->content,
+                    'actions' => $message->actions ?? [],
+                ];
+            }
+        })->toArray();
 
         return response()->json([
-            'roomId' => session('roomId'),
-            'msgs' => session('msgs', []),
-            'app_key' => session('app_key'),
+            'roomId' => $session->room_id,
+            'msgs' => $msgs,
+            'app_key' => $session->app_key,
         ]);
     }
 
     /**
      * Clear chat session data
      */
-    public function clearChats(): JsonResponse
+    public function clearChats(Request $request): JsonResponse
     {
-        // Check if session is initialized
-        if (!session('roomId')) {
-            return response()->json([
-                'error' => 'Session not initialized. Nothing to clear.',
-            ], 400);
-        }
+        // Get the chat session from middleware
+        $session = $request->attributes->get('chat_session');
 
-        // Clear all session data
-        session()->forget(['roomId', 'msgs', 'app_key']);
-        
+        // Delete all messages for this session
+        $session->messages()->delete();
+
         return response()->json([
             'status' => 'cleared',
             'message' => 'Chat session cleared successfully.',
