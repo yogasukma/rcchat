@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Contracts\AIServiceInterface;
 use App\Services\TokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,9 +12,12 @@ class ChatController extends Controller
 {
     protected TokenService $tokenService;
 
-    public function __construct(TokenService $tokenService)
+    protected AIServiceInterface $aiService;
+
+    public function __construct(TokenService $tokenService, AIServiceInterface $aiService)
     {
         $this->tokenService = $tokenService;
+        $this->aiService = $aiService;
     }
 
     /**
@@ -52,12 +56,9 @@ class ChatController extends Controller
 
         $question = $request->input('q');
 
-        // Generate fake response using Faker
-        $answer = fake()->sentence(rand(5, 15));
-        $actions = [
-            fake()->word().'_'.fake()->word() => fake()->sentence(3),
-            fake()->word().'_'.fake()->word() => fake()->sentence(3),
-        ];
+        // Generate AI response using configured AI service
+        $answer = $this->aiService->generateResponse($question);
+        $actions = [];
 
         // Create question message
         $session->messages()->create([
