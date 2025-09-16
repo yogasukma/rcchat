@@ -54,10 +54,18 @@ class ChatController extends Controller
         // Get the chat session from middleware
         $session = $request->attributes->get('chat_session');
 
+        info('Received message: '.$request->input('q').' for session '.json_encode($session));
+
         $question = $request->input('q');
 
-        // Generate AI response using configured AI service
-        $answer = $this->aiService->generateResponse($question);
+        // Prepare context for AI service (including RunCloud token if available)
+        $context = [];
+        if ($session->app_key) {
+            $context['runcloud_token'] = $session->app_key;
+        }
+
+        // Generate AI response using configured AI service with context
+        $answer = $this->aiService->generateResponseWithContext($question, $context);
         $actions = [];
 
         // Create question message

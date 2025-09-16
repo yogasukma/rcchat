@@ -61,8 +61,14 @@ class ChatSendCommand extends Command
                 return Command::FAILURE;
             }
 
-            // Generate AI response
-            $answer = $this->aiService->generateResponse($message);
+            // Prepare context for AI service (including RunCloud token if available)
+            $context = [];
+            if ($session->app_key && str_starts_with($session->app_key, 'rc_')) {
+                $context['runcloud_token'] = $session->app_key;
+            }
+
+            // Generate AI response with context
+            $answer = $this->aiService->generateResponseWithContext($message, $context);
             $actions = [];
 
             // Store messages in database

@@ -10,6 +10,11 @@ interface AIServiceInterface
     public function generateResponse(string $message): string;
 
     /**
+     * Generate a response with additional context.
+     */
+    public function generateResponseWithContext(string $message, array $context = []): string;
+
+    /**
      * Check if the AI service is properly configured.
      */
     public function isConfigured(): bool;
