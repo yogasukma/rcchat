@@ -39,4 +39,9 @@ return [
         'api_key' => env('GEMINI_API_KEY'),
     ],
 
+    'runcloud_mcp' => [
+        'token' => env('RC_MCP_TOKEN'),
+        'url' => env('RC_MCP_URL'),
+    ],
+
 ];
