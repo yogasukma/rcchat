@@ -46,14 +46,10 @@ class RunCloudMCPService
             ];
 
             $headers = [
-                'Authorization' => 'Bearer '.$this->mcpToken,
+                'Authorization' => 'Bearer ' . $this->mcpToken,
                 'X-RunCloud-Token' => $runcloudToken,
                 'Content-Type' => 'application/json',
             ];
-
-            info(json_encode($payload));
-
-            info(json_encode($headers));
 
             $response = Http::timeout(30)
                 ->withHeaders($headers)
@@ -80,7 +76,6 @@ class RunCloudMCPService
             }
 
             return $data['result'] ?? null;
-
         } catch (\Exception $e) {
             Log::error('MCP API exception', [
                 'message' => $e->getMessage(),
@@ -91,67 +86,6 @@ class RunCloudMCPService
         }
     }
 
-    /**
-     * List all RunCloud servers
-     */
-    public function listServers(string $runcloudToken): ?array
-    {
-        return $this->callTool('list-servers', [], $runcloudToken);
-    }
-
-    /**
-     * Find a specific server
-     */
-    public function findServer(string $runcloudToken, string $serverId): ?array
-    {
-        return $this->callTool('find-server', ['id' => $serverId], $runcloudToken);
-    }
-
-    /**
-     * List web applications on a server
-     */
-    public function listWebApplications(string $runcloudToken, string $serverId): ?array
-    {
-        return $this->callTool('list-web-applications', ['server_id' => $serverId], $runcloudToken);
-    }
-
-    /**
-     * Create a new web application
-     */
-    public function createWebApplication(string $runcloudToken, string $serverId, string $name, string $domainName, array $options = []): ?array
-    {
-        $arguments = array_merge([
-            'server_id' => $serverId,
-            'name' => $name,
-            'domain_name' => $domainName,
-        ], $options);
-
-        return $this->callTool('create-web-application', $arguments, $runcloudToken);
-    }
-
-    /**
-     * List databases on a server
-     */
-    public function listDatabases(string $runcloudToken, string $serverId): ?array
-    {
-        return $this->callTool('list-databases', ['server_id' => $serverId], $runcloudToken);
-    }
-
-    /**
-     * List backups with optional filtering
-     */
-    public function listBackups(string $runcloudToken, array $filters = []): ?array
-    {
-        return $this->callTool('list-backups', $filters, $runcloudToken);
-    }
-
-    /**
-     * Create a backup
-     */
-    public function createBackup(string $runcloudToken, array $backupConfig): ?array
-    {
-        return $this->callTool('create-backup', $backupConfig, $runcloudToken);
-    }
 
     /**
      * List available tools from the MCP server
@@ -174,7 +108,7 @@ class RunCloudMCPService
 
             $response = Http::timeout(30)
                 ->withHeaders([
-                    'Authorization' => 'Bearer '.$this->mcpToken,
+                    'Authorization' => 'Bearer ' . $this->mcpToken,
                     'Content-Type' => 'application/json',
                 ])
                 ->post($this->mcpUrl, $payload);
@@ -197,7 +131,6 @@ class RunCloudMCPService
             }
 
             return $data['result'] ?? null;
-
         } catch (\Exception $e) {
             Log::error('MCP tools/list exception', ['message' => $e->getMessage()]);
 
@@ -237,38 +170,24 @@ class RunCloudMCPService
      */
     public function isRunCloudRelated(string $message): bool
     {
+        // Core RunCloud concepts based on available tools
         $keywords = [
-            'runcloud', 'server', 'servers', 'web app', 'webapp', 'database', 'backup', 'backups',
-            'deploy', 'deployment', 'domain', 'ssl', 'nginx', 'apache',
-            'mysql', 'postgresql', 'redis', 'memcached', 'php', 'node',
-            'python', 'ruby', 'go', 'java', 'monitoring', 'logs', 'application', 'applications',
-            'site', 'sites', 'website', 'websites', 'instance', 'instances', 'host', 'hosting',
-            'infrastructure', 'vps', 'cloud',
-        ];
-
-        // Additional patterns that might indicate RunCloud queries
-        $patterns = [
-            '/how many.*server/i',
-            '/list.*server/i',
-            '/show.*server/i',
-            '/my.*server/i',
-            '/server.*count/i',
-            '/create.*app/i',
-            '/delete.*app/i',
+            'server',
+            'servers',
+            'application',
+            'applications',
+            'app',
+            'webapp',
+            'database',
+            'backup',
+            'backups',
+            'runcloud'
         ];
 
         $message = strtolower($message);
 
-        // Check keywords
         foreach ($keywords as $keyword) {
             if (str_contains($message, $keyword)) {
-                return true;
-            }
-        }
-
-        // Check patterns
-        foreach ($patterns as $pattern) {
-            if (preg_match($pattern, $message)) {
                 return true;
             }
         }
