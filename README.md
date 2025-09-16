@@ -1,26 +1,34 @@
-# RCChat API Server
+# RCChat - RunCloud Management Assistant
 
-A token-based Chat API server built with Laravel 12, featuring secure authentication, persistent storage, and dummy AI responses. Fully transformed from session-based to stateless API architecture.
+**RCChat** is a Laravel-based AI chatbot that provides autonomous RunCloud server management through natural language conversations.
 
-## 🚀 Features
+## ✨ Key Features
 
-- **🔒 Token-based Authentication** with 3-hour expiry
-- **🌐 RESTful API Server** with 4 secure endpoints
-- **💾 Database Storage** with SQLite/PostgreSQL support
-- **🤖 Dummy AI Responses** using Laravel Faker
-- **⏰ Automatic Token Cleanup** via scheduled commands
-- **🧪 Comprehensive Testing** with Pest v4
-- **🔧 Laravel 12** with modern architecture
-- **📱 Multiple Auth Methods** (Headers, Bearer tokens, query params)
+- **🤖 AI-Powered**: Uses Google's Gemini 2.5 Flash for intelligent conversation processing
+- **☁️ RunCloud Integration**: Direct API integration for managing servers, web applications, databases, and backups
+- **🔧 MCP Protocol**: Leverages Model Context Protocol for dynamic tool discovery and execution
+- **🔄 Multi-turn Conversations**: Autonomous agent that can chain multiple operations (up to 5 turns)
+- **🎯 Smart Filtering**: Only processes RunCloud-related queries, rejecting general chat requests
+- **🔐 Token-based Authentication**: Secure, stateless API architecture
 
-## 🛠 Tech Stack
+## 🚀 Core Functionality
 
-- **Backend**: Laravel 12, PHP 8.2+
-- **Frontend**: Tailwind CSS 4.0, Vite
-- **Database**: SQLite (default), MySQL/PostgreSQL support
-- **Testing**: Pest v4 with browser testing
-- **Code Quality**: Laravel Pint
-- **AI Tooling**: Laravel Boost MCP Server
+- **Server Management**: List and manage RunCloud servers
+- **Web Applications**: Create and manage web applications
+- **Database Operations**: Handle database management tasks
+- **Backup Management**: Create and manage backups
+
+## 🏗️ Architecture
+
+- **GeminiService**: Handles AI conversations and tool orchestration
+- **RunCloudMCPService**: Manages RunCloud API calls via MCP protocol
+- **Auto-discovery**: Runtime discovery of available RunCloud tools
+- **Secure Access**: Token-based authentication for secure API access
+
+The system acts as an intelligent intermediary between users and RunCloud infrastructure, enabling complex server management tasks through simple conversational commands like:
+- *"List all my servers"*
+- *"Create a backup for application 'my-app'"*
+- *"Show web applications on server 'production'"*
 
 ## 📦 Installation
 
