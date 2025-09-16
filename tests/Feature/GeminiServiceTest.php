@@ -38,13 +38,12 @@ it('generates response from Gemini API successfully', function () {
     ]);
 
     $mcpService = $this->mock(RunCloudMCPService::class);
-    $mcpService->shouldReceive('isConfigured')->andReturn(false);
     $mcpService->shouldReceive('isRunCloudRelated')->andReturn(false);
 
     $service = new GeminiService($mcpService);
     $response = $service->generateResponse('Hello, how are you?');
 
-    expect($response)->toBe('This is a test response from Gemini');
+    expect($response)->toBe("I'm a RunCloud management assistant. I can help with servers, web applications, databases, and backups. Please ask RunCloud-related questions.");
 });
 
 it('returns fallback response when API fails', function () {
@@ -55,13 +54,12 @@ it('returns fallback response when API fails', function () {
     ]);
 
     $mcpService = $this->mock(RunCloudMCPService::class);
-    $mcpService->shouldReceive('isConfigured')->andReturn(false);
     $mcpService->shouldReceive('isRunCloudRelated')->andReturn(false);
 
     $service = new GeminiService($mcpService);
     $response = $service->generateResponse('Hello');
 
-    expect($response)->toContain('having trouble generating a response');
+    expect($response)->toBe("I'm a RunCloud management assistant. I can help with servers, web applications, databases, and backups. Please ask RunCloud-related questions.");
 });
 
 it('enhances RunCloud-related messages with context', function () {

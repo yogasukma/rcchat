@@ -28,6 +28,16 @@ class GeminiService implements AIServiceInterface
     }
 
     /**
+     * Centralized method to call Gemini API
+     */
+    protected function callGeminiAPI(array $payload): \Illuminate\Http\Client\Response
+    {
+        return Http::withHeaders([
+            'Content-Type' => 'application/json',
+        ])->post($this->baseUrl . '/models/gemini-2.5-flash:generateContent?key=' . $this->apiKey, $payload);
+    }
+
+    /**
      * Generate a simple response without context
      */
     public function generateResponse(string $message): string
@@ -54,12 +64,12 @@ class GeminiService implements AIServiceInterface
 
             // Only add anti-tool instruction if no RunCloud context
             if (! isset($context['runcloud_token'])) {
-                $finalMessage = $enhancedMessage."\n\nIMPORTANT: You are an AI assistant that provides direct answers. Do not attempt to call any tools or functions.";
+                $finalMessage = $enhancedMessage . "\n\nIMPORTANT: You are an AI assistant that provides direct answers. Do not attempt to call any tools or functions.";
             } else {
                 $finalMessage = $enhancedMessage;
             }
 
-            info('Sending enhanced message to Gemini: '.$enhancedMessage);
+            info('Sending enhanced message to Gemini: ' . $enhancedMessage);
 
             $payload = [
                 'contents' => [
@@ -87,8 +97,7 @@ class GeminiService implements AIServiceInterface
                 }
             }
 
-            $response = Http::timeout(30)
-                ->post($this->baseUrl.'/models/gemini-2.5-flash:generateContent?key='.$this->apiKey, $payload);
+            $response = $this->callGeminiAPI($payload);
 
             if (! $response->successful()) {
                 Log::error('Gemini API error', [
@@ -154,7 +163,7 @@ class GeminiService implements AIServiceInterface
         if (! $this->mcpService->isConfigured() || ! $this->mcpService->isRunCloudRelated($message)) {
             // If MCP not configured but we have a RunCloud token, inform the user
             if (isset($context['runcloud_token'])) {
-                return $message."\n\nNote: I can help with RunCloud management using your token ".$context['runcloud_token'].", but I'm unable to fetch live data right now. This could be due to an invalid token or MCP server connectivity issues.";
+                return $message . "\n\nNote: I can help with RunCloud management using your token " . $context['runcloud_token'] . ", but I'm unable to fetch live data right now. This could be due to an invalid token or MCP server connectivity issues.";
             }
 
             return $message;
@@ -166,7 +175,7 @@ class GeminiService implements AIServiceInterface
         }
 
         // For RunCloud queries, provide general autonomous behavior guidance
-        $guidance = "\n\nNote: You have access to RunCloud tools. If you need IDs or information that isn't directly provided, use the available tools to look up the required data first, then complete the requested task. Work autonomously without asking the user for missing information that you can find yourself.";
+        $guidance = "\n\nYou are an autonomous RunCloud management agent with access to RunCloud tools. Analyze the request, determine what information you need, use the available tools to gather that information autonomously. For read-only operations (list, find, show), complete them directly. For write operations (create, delete, modify), you may ask for confirmation before proceeding, but never ask users for information you can find yourself using the available tools.";
 
         return $message . $guidance;
     }
@@ -221,7 +230,6 @@ class GeminiService implements AIServiceInterface
             return [
                 'functionDeclarations' => $functionDeclarations,
             ];
-
         } catch (\Exception $e) {
             Log::error('Failed to auto-discover MCP tools', [
                 'message' => $e->getMessage(),
@@ -254,7 +262,7 @@ class GeminiService implements AIServiceInterface
                 'error' => $e->getMessage(),
             ]);
 
-            return ['success' => false, 'error' => 'Tool call failed: '.$e->getMessage()];
+            return ['success' => false, 'error' => 'Tool call failed: ' . $e->getMessage()];
         }
     }
 
@@ -322,8 +330,7 @@ class GeminiService implements AIServiceInterface
                 $payload['tools'] = [$tools];
             }
 
-            $response = Http::timeout(30)
-                ->post($this->baseUrl.'/models/gemini-2.5-flash:generateContent?key='.$this->apiKey, $payload);
+            $response = $this->callGeminiAPI($payload);
 
             if (! $response->successful()) {
                 Log::error('Multi-turn conversation failed', [
