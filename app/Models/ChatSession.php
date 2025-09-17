@@ -11,11 +11,15 @@ class ChatSession extends Model
         'room_id',
         'user_token',
         'app_key',
+        'user_id',
+        'room_name',
         'expires_at',
+        'last_activity',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
+        'last_activity' => 'datetime',
     ];
 
     /**
@@ -56,5 +60,36 @@ class ChatSession extends Model
     public function scopeExpired($query)
     {
         return $query->where('expires_at', '<=', now());
+    }
+
+    /**
+     * Scope to get sessions for a specific user.
+     */
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    /**
+     * Update last activity timestamp.
+     */
+    public function updateLastActivity()
+    {
+        $this->last_activity = now();
+        $this->save();
+    }
+
+    /**
+     * Generate a room name from the first message.
+     */
+    public function generateRoomName()
+    {
+        $firstMessage = $this->messages()->where('type', 'question')->first();
+        if ($firstMessage) {
+            // Simple room name generation (can be enhanced with AI later)
+            $content = str($firstMessage->content)->limit(30)->trim();
+            $this->room_name = $content ?: 'New Chat';
+            $this->save();
+        }
     }
 }

@@ -27,18 +27,21 @@ class ChatController extends Controller
     {
         $request->validate([
             'app_key' => 'required|string',
+            'user_id' => 'nullable|string',
         ]);
 
         $roomId = Str::random(10);
         $appKey = $request->input('app_key');
+        $userId = $request->input('user_id');
 
         // Create new chat session with token
-        $session = $this->tokenService->createSession($roomId, $appKey);
+        $session = $this->tokenService->createSession($roomId, $appKey, $userId);
 
         return response()->json([
             'status' => 'initialized',
             'roomId' => $session->room_id,
             'userToken' => $session->user_token,
+            'userId' => $session->user_id,
         ], 201);
     }
 
@@ -80,6 +83,9 @@ class ChatController extends Controller
             'content' => $answer,
             'actions' => $actions,
         ]);
+        
+        // Update session activity and generate room name if needed
+        $this->tokenService->updateSessionActivity($session);
 
         return response()->json([
             'a' => $answer,
@@ -128,6 +134,39 @@ class ChatController extends Controller
         return response()->json([
             'status' => 'cleared',
             'message' => 'Chat session cleared successfully.',
+        ]);
+    }
+
+    /**
+     * Get all rooms for a user
+     */
+    public function getUserRooms(Request $request): JsonResponse
+    {
+        $request->validate([
+            'user_id' => 'required|string',
+        ]);
+
+        $userId = $request->input('user_id');
+        $rooms = $this->tokenService->getUserRooms($userId);
+
+        // Transform rooms for frontend
+        $roomsData = $rooms->map(function ($session) {
+            $lastMessage = $session->messages->first();
+            
+            return [
+                'roomId' => $session->room_id,
+                'userToken' => $session->user_token,
+                'roomName' => $session->room_name ?: 'New Chat',
+                'lastActivity' => $session->last_activity?->toISOString(),
+                'messageCount' => $session->messages()->count(),
+                'lastMessage' => $lastMessage ? $lastMessage->content : null,
+                'hasRunCloudToken' => !empty($session->app_key),
+            ];
+        });
+
+        return response()->json([
+            'userId' => $userId,
+            'rooms' => $roomsData,
         ]);
     }
 }

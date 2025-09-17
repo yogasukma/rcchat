@@ -9,6 +9,7 @@ Route::get('/', function () {
 
 // Chat endpoints
 Route::post('/init', [ChatController::class, 'init']); // No middleware - public endpoint
+Route::get('/rooms', [ChatController::class, 'getUserRooms']); // No middleware - public endpoint
 
 // Protected endpoints that require token authentication
 Route::middleware('verify.chat.token')->group(function () {

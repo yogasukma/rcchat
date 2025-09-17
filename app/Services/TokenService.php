@@ -25,16 +25,23 @@ class TokenService
     /**
      * Create a new chat session with token.
      */
-    public function createSession(string $roomId, string $appKey): ChatSession
+    public function createSession(string $roomId, string $appKey, ?string $userId = null): ChatSession
     {
         $userToken = $this->generateToken();
         $expiresAt = now()->addHours(self::TOKEN_EXPIRY_HOURS);
+        
+        // Generate guest user ID if not provided
+        if (!$userId) {
+            $userId = 'guest_' . Str::random(8);
+        }
 
         return ChatSession::create([
             'room_id' => $roomId,
             'user_token' => $userToken,
             'app_key' => $appKey,
+            'user_id' => $userId,
             'expires_at' => $expiresAt,
+            'last_activity' => now(),
         ]);
     }
 
@@ -91,5 +98,32 @@ class TokenService
         $session->expires_at = now()->subSecond();
 
         return $session->save();
+    }
+
+    /**
+     * Get all rooms for a user, ordered by last activity.
+     */
+    public function getUserRooms(string $userId): \Illuminate\Database\Eloquent\Collection
+    {
+        return ChatSession::forUser($userId)
+            ->valid()
+            ->with(['messages' => function($query) {
+                $query->latest()->limit(1);
+            }])
+            ->orderBy('last_activity', 'desc')
+            ->get();
+    }
+
+    /**
+     * Update session activity and generate room name if needed.
+     */
+    public function updateSessionActivity(ChatSession $session): void
+    {
+        $session->updateLastActivity();
+        
+        // Generate room name if not set and has messages
+        if (!$session->room_name && $session->messages()->count() > 0) {
+            $session->generateRoomName();
+        }
     }
 }
